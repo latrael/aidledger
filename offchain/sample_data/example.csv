@@ -1,0 +1,4 @@
+tx_id,date,country,region,vendor,beneficiary,category,amount_usd,currency,description
+TX-0001,2025-11-01,Kenya,Nairobi County,Local Market A,BEN-001,Food,125.50,KES,Food voucher distribution
+TX-0002,2025-11-02,Kenya,Nairobi County,Clinic Hope,BEN-002,Health,300.00,KES,Medication reimbursement
+TX-0003,2025-11-03,Kenya,Kajiado County,Water Co-op,BEN-003,Water,80.00,KES,Water tank refill
