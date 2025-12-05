@@ -1,106 +1,117 @@
-import * as fs from "fs";
-import * as path from "path";
+// submitBatch.ts
+// @ts-nocheck
+
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { parse } from "csv-parse/sync";
-import { MerkleTree } from "merkletreejs";
-import keccak256 from "keccak256";
-// import { Aidledger } from "../target/types/aidledger"; // if you want TS types
+const { BN } = anchor;
 
 const NGO_SEED = Buffer.from("ngo");
 const BATCH_SEED = Buffer.from("batch");
 
+// ---- load & patch IDL same way as registerNgo.ts ----
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const rawIdl = require("../target/idl/aidledger.json");
+const modernIdl = rawIdl && rawIdl.default ? rawIdl.default : rawIdl;
+
+const patchedIdl: any = {
+  ...modernIdl,
+  accounts: (modernIdl.accounts ?? [])
+    .filter((acc: any) => !!acc)
+    .map((acc: any) => ({
+      ...acc,
+      size: acc.size ?? 0,
+    })),
+};
+
+console.log(
+  "submitBatch: IDL instructions:",
+  patchedIdl.instructions?.map((ix: any) => ix.name)
+);
+console.log(
+  "submitBatch: accounts:",
+  patchedIdl.accounts?.map((a: any) => a.name)
+);
+
+// ---- main script ----
+
+// Usage (example):
+// npx ts-node submitBatch.ts "NGO_PDA" "0" "ipfs://aidledger-demo-batch" "Kenya" "Cash-vouchers-Jan" "startTime" "endTime"
+
 async function main() {
-  // 1. CLI args: csv path + basic metadata
-  const csvPath = process.argv[2];
-  if (!csvPath) {
-    console.error("Usage: ts-node submitBatch.ts <path/to/file.csv>");
-    process.exit(1);
+  // CLI args - updated to handle NGO PDA as first parameter
+  const ngoPdaArg = process.argv[2]; // NGO PDA (required)
+  const batchIndexArg = process.argv[3] ?? "0";
+  const dataUri = process.argv[4] ?? "ipfs://aidledger-demo-batch";
+  const region = process.argv[5] ?? "Global";
+  const programTag = process.argv[6] ?? "DemoProgram";
+  const startTimeArg = process.argv[7] ?? Math.floor(Date.now() / 1000).toString();
+  const endTimeArg = process.argv[8] ?? (Math.floor(Date.now() / 1000) + 86400).toString();
+
+  if (!ngoPdaArg) {
+    throw new Error("NGO PDA is required as the first argument");
   }
 
-  const region = process.argv[3] || "MENA";
-  const programTag = process.argv[4] || "FoodAid";
-  const batchIndex = 0; // later: increment or take from arg
+  const batchIndex = BigInt(batchIndexArg);
+  const startTime = new BN(startTimeArg);
+  const endTime = new BN(endTimeArg);
 
-  // 2. Read CSV and parse rows
-  const absPath = path.resolve(csvPath);
-  const csvContent = fs.readFileSync(absPath, "utf8");
-  const records = parse(csvContent, {
-    columns: true,
-    skip_empty_lines: true,
-  }) as Record<string, string>[];
+  // simple dummy merkle root: 32 zero bytes
+  const merkleRoot: number[] = new Array(32).fill(0);
 
-  console.log(`Loaded ${records.length} rows from ${absPath}`);
-
-  // 3. Canonicalize each row and hash it
-  const leaves = records.map((row) => {
-    // deterministic ordering of keys
-    const keys = Object.keys(row).sort();
-    const canonical = keys.map((k) => `${k}=${row[k]}`).join("|");
-    return keccak256(Buffer.from(canonical));
-  });
-
-  const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-  const root = tree.getRoot(); // Buffer (32 bytes)
-
-  if (root.length !== 32) {
-    throw new Error(`Merkle root is not 32 bytes, got ${root.length}`);
-  }
-
-  console.log("Merkle root:", "0x" + root.toString("hex"));
-
-  // 4. TODO: upload CSV to IPFS and get URI
-  // For now, just fake it:
-  const dataUri = "ipfs://TODO-real-ipfs-hash";
-
-  // 5. Anchor provider / program
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const wallet = provider.wallet;
 
-  const idl = await anchor.Program.fetchIdl(
-    new PublicKey("4wcEn4cPenW3GM1eYfNoAHsmnN1SPNLnLqSCtBruaobD"),
-    provider
-  );
-  if (!idl) {
-    throw new Error("Could not fetch IDL for Aidledger");
-  }
-
   const program = new anchor.Program(
-    idl,
-    new PublicKey("4wcEn4cPenW3GM1eYfNoAHsmnN1SPNLnLqSCtBruaobD"),
+    patchedIdl as anchor.Idl,
     provider
   );
 
-  // 6. Derive NGO PDA (assumes NGO already registered; we can add a register step too)
-  const [ngoPda] = PublicKey.findProgramAddressSync(
-    [NGO_SEED, wallet.publicKey.toBuffer()],
-    program.programId
-  );
+  console.log("Program ID from IDL:", program.programId.toBase58());
+  console.log("Admin wallet:", wallet.publicKey.toBase58());
+  console.log("batchIndex:", batchIndex.toString());
+  console.log("dataUri:", dataUri);
+  console.log("region:", region);
+  console.log("programTag:", programTag);
 
-  // 7. Derive Batch PDA
-  const batchIndexBN = new anchor.BN(batchIndex);
+  // ---- use provided NGO PDA ----
+  const ngoPda = new PublicKey(ngoPdaArg);
+  console.log("NGO PDA:", ngoPda.toBase58());
+
+  // ---- derive Batch PDA ----
+  // Assuming seeds = ["batch", ngo.key(), batch_index_le_bytes]
+  const batchIndexBuf = Buffer.alloc(8);
+  batchIndexBuf.writeBigUInt64LE(batchIndex);
+
   const [batchPda] = PublicKey.findProgramAddressSync(
-    [
-      BATCH_SEED,
-      ngoPda.toBuffer(),
-      batchIndexBN.toArrayLike(Buffer, "le", 8),
-    ],
+    [BATCH_SEED, ngoPda.toBuffer(), batchIndexBuf],
     program.programId
   );
+  console.log("Batch PDA:", batchPda.toBase58());
 
-  const now = Math.floor(Date.now() / 1000);
-
-  // 8. Call submit_batch on-chain
+  // ---- call submit_batch ----
+  // Rust:
+  // submit_batch(ctx,
+  //   batch_index: u64,
+  //   merkle_root: [u8; 32],
+  //   data_uri: String,
+  //   region: String,
+  //   program_tag: String,
+  //   start_time: i64,
+  //   end_time: i64,
+  // )
+  //
+  // In Anchor TS, u64/i64 can be plain numbers if small, but BN is safer.
   const tx = await program.methods
     .submitBatch(
-      batchIndexBN,
-      Array.from(root), // [u8;32]
+      new anchor.BN(batchIndex.toString()), // u64
+      merkleRoot,
       dataUri,
       region,
       programTag,
-      new anchor.BN(now),
-      new anchor.BN(now + 3600)
+      new anchor.BN(startTime), // i64
+      new anchor.BN(endTime),   // i64
     )
     .accounts({
       ngo: ngoPda,
@@ -110,10 +121,16 @@ async function main() {
     })
     .rpc();
 
-  console.log("Submitted batch tx:", tx);
+  console.log("submitBatch tx:", tx);
+
+  // ---- fetch and print the batch account ----
+  const batchAccount = await (program as any).account.batch.fetch(batchPda);
+  console.log("Batch account:", batchAccount);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => console.log("submitBatch done"))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
