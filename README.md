@@ -13,7 +13,7 @@
 
 🔍 **[View on Solana Explorer](https://explorer.solana.com/address/4wcEn4cPenW3GM1eYfNoAHsmnN1SPNLnLqSCtBruaobD?cluster=devnet)** | 🌐 **Network**: Devnet
 
-> **Note**: This is the **backend/blockchain** repository. For the web application frontend, see [aidledger-frontend](../aidledger-frontend).
+> **Note**: This is the **backend/blockchain** repository. The frontend Repository is at: [aidledger-frontend](https://github.com/latrael/aidledger-frontend).
 
 ## 📑 Table of Contents
 
