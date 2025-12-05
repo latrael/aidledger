@@ -15,6 +15,25 @@
 
 > **Note**: This is the **backend/blockchain** repository. For the web application frontend, see [aidledger-frontend](../aidledger-frontend).
 
+## 📑 Table of Contents
+
+- [🌟 Overview](#-overview)
+- [🚀 Why Solana?](#-why-solana)
+- [🏗️ Technical Architecture](#️-technical-architecture)
+- [📊 Data Structures](#-data-structures)
+- [🔧 Development Setup](#-development-setup)
+- [⚡ Quick Start](#-quick-start)
+- [📖 Smart Contract Usage](#-smart-contract-usage)
+- [🧪 Testing](#-testing)
+- [🚀 Deployment](#-deployment)
+- [📝 CLI Tools](#-cli-tools)
+- [🔍 Program Verification](#-program-verification)
+- [⚙️ Configuration](#️-configuration)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [📚 Additional Resources](#-additional-resources)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+
 ## 🌟 Overview
 
 AidLedger addresses the critical need for transparency and accountability in humanitarian aid distribution. By leveraging Solana's high-performance blockchain, we enable:
