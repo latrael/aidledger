@@ -7,6 +7,12 @@
 
 **AidLedger** is a decentralized platform built on Solana for registering NGOs and publishing verifiable, tamper-proof impact data on-chain. This repository contains the **smart contract backend** and blockchain infrastructure that powers transparent, auditable aid distribution tracking.
 
+## 🔗 **Live Deployment**
+
+**📍 Solana Devnet Program ID**: **`4wcEn4cPenW3GM1eYfNoAHsmnN1SPNLnLqSCtBruaobD`**
+
+🔍 **[View on Solana Explorer](https://explorer.solana.com/address/4wcEn4cPenW3GM1eYfNoAHsmnN1SPNLnLqSCtBruaobD?cluster=devnet)** | 🌐 **Network**: Devnet
+
 > **Note**: This is the **backend/blockchain** repository. For the web application frontend, see [aidledger-frontend](../aidledger-frontend).
 
 ## 🌟 Overview
